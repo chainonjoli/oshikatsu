@@ -1,9 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { formatDateJaLong } from "@/lib/dates";
 import { categoryOf, ticketStatusLabel, transportLabel } from "@/lib/constants";
 import { parseSchedule } from "@/lib/types";
 import type { Checklist, ChecklistItem, EventRow, Trip } from "@/lib/types";
-import { toggleItemAction } from "@/lib/actions/checklists";
+import { toggleItem } from "@/lib/store";
 import { Card, WarningCard } from "@/components/ui";
 
 type Props = {
@@ -12,7 +14,6 @@ type Props = {
   checklist: Checklist | null;
   items: ChecklistItem[];
   isToday: boolean;
-  backPath: string;
 };
 
 function Row({ icon, label, children }: { icon: string; label: string; children: React.ReactNode }) {
@@ -26,7 +27,7 @@ function Row({ icon, label, children }: { icon: string; label: string; children:
   );
 }
 
-export default function LiveDayView({ event, trip, checklist, items, isToday, backPath }: Props) {
+export default function LiveDayView({ event, trip, checklist, items, isToday }: Props) {
   const unchecked = items.filter((i) => !i.checked);
   const schedule = trip ? parseSchedule(trip.schedule_json) : [];
 
@@ -103,36 +104,33 @@ export default function LiveDayView({ event, trip, checklist, items, isToday, ba
               <ul className="mt-2 space-y-1.5">
                 {items.map((item) => (
                   <li key={item.id}>
-                    <form action={toggleItemAction} className="flex items-center gap-2">
-                      <input type="hidden" name="item_id" value={item.id} />
-                      <input type="hidden" name="back" value={backPath} />
-                      <button
-                        type="submit"
-                        className="flex min-h-8 w-full items-center gap-2 text-left"
+                    <button
+                      type="button"
+                      onClick={() => toggleItem(item.id)}
+                      className="flex min-h-8 w-full items-center gap-2 text-left"
+                    >
+                      <span
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold"
+                        style={
+                          item.checked
+                            ? { background: "var(--color-ok)", borderColor: "var(--color-ok)", color: "#fff" }
+                            : { borderColor: "var(--color-line)", color: "transparent" }
+                        }
                       >
-                        <span
-                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold"
-                          style={
-                            item.checked
-                              ? { background: "var(--color-ok)", borderColor: "var(--color-ok)", color: "#fff" }
-                              : { borderColor: "var(--color-line)", color: "transparent" }
-                          }
-                        >
-                          ✓
-                        </span>
-                        <span
-                          className={item.checked ? "line-through" : ""}
-                          style={item.checked ? { color: "var(--color-muted)" } : undefined}
-                        >
-                          {item.name}
-                        </span>
-                      </button>
-                    </form>
+                        ✓
+                      </span>
+                      <span
+                        className={item.checked ? "line-through" : ""}
+                        style={item.checked ? { color: "var(--color-muted)" } : undefined}
+                      >
+                        {item.name}
+                      </span>
+                    </button>
                   </li>
                 ))}
               </ul>
               <Link
-                href={`/checklists/${checklist.id}`}
+                href={`/checklists/view/?id=${checklist.id}`}
                 className="mt-2 inline-block text-xs font-bold"
                 style={{ color: "var(--color-accent)" }}
               >
@@ -143,7 +141,7 @@ export default function LiveDayView({ event, trip, checklist, items, isToday, ba
             <p>
               <span style={{ color: "var(--color-muted)" }}>この予定の持ち物リストはまだありません </span>
               <Link
-                href={`/checklists?event=${event.id}`}
+                href={`/checklists/?event=${event.id}`}
                 className="font-bold"
                 style={{ color: "var(--color-accent)" }}
               >
@@ -248,14 +246,14 @@ export default function LiveDayView({ event, trip, checklist, items, isToday, ba
 
       <div className="grid grid-cols-2 gap-2 text-center text-xs font-bold">
         <Link
-          href={`/events/${event.id}/edit`}
+          href={`/events/edit/?id=${event.id}`}
           className="rounded-xl border-2 py-2.5"
           style={{ borderColor: "var(--color-line)", color: "var(--color-accent)" }}
         >
           予定を編集する
         </Link>
         <Link
-          href={trip ? `/trips/${trip.id}` : `/trips/new?event=${event.id}`}
+          href={trip ? `/trips/edit/?id=${trip.id}` : `/trips/new/?event=${event.id}`}
           className="rounded-xl border-2 py-2.5"
           style={{ borderColor: "var(--color-line)", color: "var(--color-accent)" }}
         >

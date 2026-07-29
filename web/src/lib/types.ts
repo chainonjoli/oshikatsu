@@ -1,22 +1,11 @@
-export type User = {
-  id: string;
-  email: string;
-  password_hash: string;
-  display_name: string;
-  is_admin: number;
-  plan: string;
-  created_at: string;
-  updated_at: string;
-};
+// ローカル保存(ブラウザ内)方式のデータ型
 
 export type Oshi = {
   id: string;
-  user_id: string;
   genre: string;
   group_name: string;
   member_name: string;
   color: string;
-  image_path: string | null;
   fan_since: string | null;
   memo: string;
   created_at: string;
@@ -25,8 +14,6 @@ export type Oshi = {
 
 export type EventRow = {
   id: string;
-  user_id: string;
-  oshi_id: string | null;
   title: string;
   category: string;
   date: string;
@@ -46,7 +33,6 @@ export type EventRow = {
 
 export type Trip = {
   id: string;
-  user_id: string;
   event_id: string | null;
   title: string;
   origin: string;
@@ -74,7 +60,6 @@ export type ScheduleEntry = { time: string; label: string };
 
 export type Checklist = {
   id: string;
-  user_id: string;
   event_id: string | null;
   title: string;
   created_at: string;
@@ -97,10 +82,7 @@ export type AffiliateLink = {
   url: string;
   category: string;
   description: string;
-  active: number;
-  sort_order: number;
-  created_at: string;
-  updated_at: string;
+  active: boolean;
 };
 
 export function tripTotal(t: Pick<

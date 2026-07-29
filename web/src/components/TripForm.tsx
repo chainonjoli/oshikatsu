@@ -2,20 +2,21 @@
 
 import { useState } from "react";
 import { BUDGET_FIELDS, TRANSPORT_TYPES } from "@/lib/constants";
+import type { TripInput } from "@/lib/store";
 import type { ScheduleEntry, Trip } from "@/lib/types";
 import { SubmitButton } from "./ui";
 
 type EventOption = { id: string; title: string; date: string };
 
 type Props = {
-  action: (formData: FormData) => Promise<void>;
-  trip?: Trip | null;
+  trip?: Partial<Trip> | null;
   schedule?: ScheduleEntry[];
   events: EventOption[];
   submitLabel: string;
+  onSave: (input: TripInput) => void;
 };
 
-export default function TripForm({ action, trip, schedule, events, submitLabel }: Props) {
+export default function TripForm({ trip, schedule, events, submitLabel, onSave }: Props) {
   const initialCosts: Record<string, number> = {};
   for (const f of BUDGET_FIELDS) {
     initialCosts[f.key] = trip ? ((trip as unknown as Record<string, number>)[f.key] ?? 0) : 0;
@@ -26,12 +27,66 @@ export default function TripForm({ action, trip, schedule, events, submitLabel }
     return base.map((r, i) => ({ ...r, key: i }));
   });
   const [nextKey, setNextKey] = useState(rows.length);
+  const [error, setError] = useState("");
 
   const total = Object.values(costs).reduce((a, b) => a + b, 0);
 
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const v = (name: string) => String(f.get(name) ?? "").trim();
+    const yen = (name: string) => {
+      const n = Number(v(name).replace(/[,、,\s]/g, ""));
+      return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+    };
+
+    const title = v("title");
+    if (!title || title.length > 100) {
+      setError("プラン名を入力してください(100文字まで)");
+      return;
+    }
+    const transport = v("transport_type");
+    const scheduleEntries = rows
+      .map((r) => ({ time: r.time.trim(), label: r.label.trim() }))
+      .filter((r) => r.time || r.label);
+
+    onSave({
+      event_id: v("event_id") || null,
+      title,
+      origin: v("origin"),
+      transport_type: TRANSPORT_TYPES.some((t) => t.value === transport) ? transport : "other",
+      depart_time: v("depart_time"),
+      arrive_time: v("arrive_time"),
+      return_memo: v("return_memo"),
+      hotel_name: v("hotel_name"),
+      hotel_checkin: v("hotel_checkin"),
+      hotel_checkout: v("hotel_checkout"),
+      hotel_memo: v("hotel_memo"),
+      cost_transport: yen("cost_transport"),
+      cost_hotel: yen("cost_hotel"),
+      cost_ticket: yen("cost_ticket"),
+      cost_goods: yen("cost_goods"),
+      cost_food: yen("cost_food"),
+      cost_other: yen("cost_other"),
+      schedule_json: JSON.stringify(scheduleEntries),
+      memo: v("memo"),
+    });
+  }
+
   return (
-    <form action={action} className="space-y-6">
-      {trip && <input type="hidden" name="id" value={trip.id} />}
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {error && (
+        <p
+          className="rounded-xl border-l-4 px-4 py-3 text-sm font-semibold"
+          style={{
+            background: "var(--color-warning-bg)",
+            borderColor: "var(--color-warning)",
+            color: "var(--color-warning)",
+          }}
+        >
+          {error}
+        </p>
+      )}
 
       <section className="space-y-4">
         <h2 className="text-sm font-bold" style={{ color: "var(--color-muted)" }}>基本情報</h2>
@@ -141,7 +196,6 @@ export default function TripForm({ action, trip, schedule, events, submitLabel }
           <div key={row.key} className="flex items-center gap-2">
             <input
               type="time"
-              name="schedule_time"
               className="!w-28 shrink-0"
               value={row.time}
               onChange={(e) =>
@@ -152,7 +206,6 @@ export default function TripForm({ action, trip, schedule, events, submitLabel }
             />
             <input
               type="text"
-              name="schedule_label"
               maxLength={100}
               value={row.label}
               onChange={(e) =>

@@ -1,33 +1,40 @@
+"use client";
+
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
-  getNextLiveEvent,
-  getOshi,
-  getTodayEvents,
-  getTodayLiveEvents,
-  getUpcomingDeadlines,
-  getUpcomingEvents,
-} from "@/lib/queries";
+  nextLiveEvent,
+  todayEvents,
+  todayLiveEvents,
+  upcomingDeadlines,
+  upcomingEvents,
+  useAppData,
+} from "@/lib/store";
+import { useMounted } from "@/lib/useMounted";
 import { daysBetween, formatDateJa, todayJST } from "@/lib/dates";
 import { categoryOf } from "@/lib/constants";
 import { BigButton, Card, CategoryBadge, SectionTitle } from "@/components/ui";
 
-export const dynamic = "force-dynamic";
+export default function HomePage() {
+  const mounted = useMounted();
+  const data = useAppData();
+  const router = useRouter();
+  const oshi = data.oshi;
 
-export default async function HomePage() {
-  const user = await requireUser();
-  const oshi = await getOshi(user.id);
-  if (!oshi) redirect("/setup");
+  useEffect(() => {
+    if (mounted && !oshi) router.replace("/setup");
+  }, [mounted, oshi, router]);
+
+  if (!mounted || !oshi) return <main className="py-20" />;
 
   const today = todayJST();
-  const [todayLives, nextLive, deadlines, todayEvents, upcoming] = await Promise.all([
-    getTodayLiveEvents(user.id),
-    getNextLiveEvent(user.id),
-    getUpcomingDeadlines(user.id, 7),
-    getTodayEvents(user.id),
-    getUpcomingEvents(user.id, 4),
-  ]);
+  const todayLives = todayLiveEvents(data);
+  const nextLive = nextLiveEvent(data);
+  const deadlines = upcomingDeadlines(data, 7);
+  const todays = todayEvents(data);
+  const upcoming = upcomingEvents(data, 4);
+  const listed = todays.length > 0 ? todays : upcoming;
 
   return (
     <main className="space-y-4">
@@ -36,7 +43,7 @@ export default async function HomePage() {
         className="rounded-2xl px-5 py-4"
         style={{ background: "var(--color-accent)", color: "var(--color-accent-text)" }}
       >
-        <p className="text-xs opacity-90">{user.display_name} さんの推し活</p>
+        <p className="text-xs opacity-90">わたしの推し活</p>
         <p className="mt-0.5 text-lg font-bold">
           ♥ {oshi.member_name}
           <span className="ml-2 text-xs font-normal opacity-90">({oshi.group_name})</span>
@@ -51,7 +58,7 @@ export default async function HomePage() {
       {/* 当日はライブ当日モードを最上部に大きく */}
       {todayLives.length > 0 && (
         <Link
-          href={todayLives.length === 1 ? `/today/${todayLives[0].id}` : "/today"}
+          href={todayLives.length === 1 ? `/today/view/?id=${todayLives[0].id}` : "/today"}
           className="block rounded-2xl border-2 p-5 text-center"
           style={{ borderColor: "var(--color-accent)", background: "var(--color-surface)" }}
         >
@@ -80,7 +87,11 @@ export default async function HomePage() {
           <ul className="mt-1 space-y-1">
             {deadlines.map((e) => (
               <li key={e.id}>
-                <Link href={`/events/${e.id}/edit`} className="flex items-baseline gap-2 text-sm font-semibold" style={{ color: "var(--color-warning)" }}>
+                <Link
+                  href={`/events/edit/?id=${e.id}`}
+                  className="flex items-baseline gap-2 text-sm font-semibold"
+                  style={{ color: "var(--color-warning)" }}
+                >
                   <span className="shrink-0">{formatDateJa(e.date)}</span>
                   <span>
                     {categoryOf(e.category).label}「{e.title}」
@@ -94,8 +105,8 @@ export default async function HomePage() {
 
       {/* 今日の予定・直近の予定 */}
       <Card>
-        <SectionTitle>📅 {todayEvents.length > 0 ? "今日の予定" : "直近の予定"}</SectionTitle>
-        {(todayEvents.length > 0 ? todayEvents : upcoming).length === 0 ? (
+        <SectionTitle>📅 {todays.length > 0 ? "今日の予定" : "直近の予定"}</SectionTitle>
+        {listed.length === 0 ? (
           <div className="py-3 text-center">
             <p className="text-sm" style={{ color: "var(--color-muted)" }}>
               まだ予定がありません。
@@ -112,9 +123,9 @@ export default async function HomePage() {
           </div>
         ) : (
           <ul className="space-y-2">
-            {(todayEvents.length > 0 ? todayEvents : upcoming).map((e) => (
+            {listed.map((e) => (
               <li key={e.id}>
-                <Link href={`/events/${e.id}/edit`} className="flex items-center gap-2">
+                <Link href={`/events/edit/?id=${e.id}`} className="flex items-center gap-2">
                   <span className="w-16 shrink-0 text-sm font-bold">{formatDateJa(e.date)}</span>
                   <CategoryBadge category={e.category} />
                   <span className="truncate text-sm">{e.title}</span>

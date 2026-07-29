@@ -1,23 +1,20 @@
+"use client";
+
 import Link from "next/link";
-import { requireUser } from "@/lib/auth";
-import { getActiveLinks, getEvent, getTrips } from "@/lib/queries";
+import { eventById, useAppData } from "@/lib/store";
+import { useMounted } from "@/lib/useMounted";
+import { getActiveLinks } from "@/lib/affiliate";
 import { formatDateJa } from "@/lib/dates";
 import { transportLabel } from "@/lib/constants";
 import { tripTotal } from "@/lib/types";
 import { Card, PrBlock } from "@/components/ui";
 
-export const dynamic = "force-dynamic";
+export default function TripsPage() {
+  const mounted = useMounted();
+  const data = useAppData();
+  if (!mounted) return <main className="py-20" />;
 
-export default async function TripsPage() {
-  const user = await requireUser();
-  const [trips, hotelLinks, transportLinks] = await Promise.all([
-    getTrips(user.id),
-    getActiveLinks("hotel"),
-    getActiveLinks("transport"),
-  ]);
-  const linkedEvents = await Promise.all(
-    trips.map((t) => (t.event_id ? getEvent(user.id, t.event_id) : Promise.resolve(null)))
-  );
+  const trips = [...data.trips].sort((a, b) => b.created_at.localeCompare(a.created_at));
 
   return (
     <main className="space-y-4">
@@ -42,12 +39,12 @@ export default async function TripsPage() {
         </Card>
       ) : (
         <ul className="space-y-2">
-          {trips.map((t, i) => {
-            const event = linkedEvents[i];
+          {trips.map((t) => {
+            const event = t.event_id ? eventById(data, t.event_id) : null;
             return (
               <li key={t.id}>
                 <Link
-                  href={`/trips/${t.id}`}
+                  href={`/trips/edit/?id=${t.id}`}
                   className="block rounded-2xl bg-white p-4"
                   style={{ boxShadow: "0 1px 3px rgba(61,58,62,0.08)" }}
                 >
@@ -74,8 +71,8 @@ export default async function TripsPage() {
         </ul>
       )}
 
-      <PrBlock title="ホテルの予約" links={hotelLinks} />
-      <PrBlock title="交通の予約" links={transportLinks} />
+      <PrBlock title="ホテルの予約" links={getActiveLinks("hotel")} />
+      <PrBlock title="交通の予約" links={getActiveLinks("transport")} />
     </main>
   );
 }

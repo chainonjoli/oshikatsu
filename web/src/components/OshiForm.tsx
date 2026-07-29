@@ -1,23 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { COLOR_PALETTE, PRESET_GROUPS } from "@/lib/constants";
-import { saveOshiAction } from "@/lib/actions/oshi";
+import { saveOshi } from "@/lib/store";
+import type { Oshi } from "@/lib/types";
 import { SubmitButton } from "./ui";
 
 type Props = {
-  initial?: {
-    group_name: string;
-    member_name: string;
-    color: string;
-    fan_since: string | null;
-    memo: string;
-  } | null;
-  backPath: string;
+  initial?: Oshi | null;
   submitLabel: string;
+  afterSavePath: string;
 };
 
-export default function OshiForm({ initial, backPath, submitLabel }: Props) {
+export default function OshiForm({ initial, submitLabel, afterSavePath }: Props) {
+  const router = useRouter();
   const preset = PRESET_GROUPS[0];
   const initialGroup = initial?.group_name ?? preset.name;
   const isPresetGroup = initialGroup === preset.name;
@@ -29,17 +26,49 @@ export default function OshiForm({ initial, backPath, submitLabel }: Props) {
   );
   const [memberName, setMemberName] = useState(initial?.member_name ?? "");
   const [color, setColor] = useState(initial?.color ?? COLOR_PALETTE[1].hex);
+  const [fanSince, setFanSince] = useState(initial?.fan_since ?? "");
+  const [memo, setMemo] = useState(initial?.memo ?? "");
+  const [error, setError] = useState("");
 
   const usePreset = groupChoice === preset.name;
   const memberIsCustom = !usePreset || memberChoice === "__custom__";
-  const effectiveMember = memberIsCustom ? memberName : memberChoice;
+  const effectiveGroup = usePreset ? preset.name : groupName.trim();
+  const effectiveMember = (memberIsCustom ? memberName : memberChoice).trim();
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!effectiveGroup || effectiveGroup.length > 50) {
+      setError("グループ名を入力してください(50文字まで)");
+      return;
+    }
+    if (!effectiveMember || effectiveMember.length > 50) {
+      setError("推しの名前を入力してください(50文字まで)");
+      return;
+    }
+    saveOshi({
+      group_name: effectiveGroup,
+      member_name: effectiveMember,
+      color,
+      fan_since: fanSince || null,
+      memo: memo.trim(),
+    });
+    router.push(afterSavePath);
+  }
 
   return (
-    <form action={saveOshiAction} className="space-y-5">
-      <input type="hidden" name="back" value={backPath} />
-      <input type="hidden" name="group_name" value={usePreset ? preset.name : groupName} />
-      <input type="hidden" name="member_name" value={effectiveMember} />
-      <input type="hidden" name="color" value={color} />
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {error && (
+        <p
+          className="rounded-xl border-l-4 px-4 py-3 text-sm font-semibold"
+          style={{
+            background: "var(--color-warning-bg)",
+            borderColor: "var(--color-warning)",
+            color: "var(--color-warning)",
+          }}
+        >
+          {error}
+        </p>
+      )}
 
       <div>
         <label>グループ</label>
@@ -133,12 +162,24 @@ export default function OshiForm({ initial, backPath, submitLabel }: Props) {
 
       <div>
         <label htmlFor="fan_since">ファンになった日(任意)</label>
-        <input type="date" id="fan_since" name="fan_since" defaultValue={initial?.fan_since ?? ""} />
+        <input
+          type="date"
+          id="fan_since"
+          value={fanSince}
+          onChange={(e) => setFanSince(e.target.value)}
+        />
       </div>
 
       <div>
         <label htmlFor="memo">自由メモ(任意)</label>
-        <textarea id="memo" name="memo" rows={2} defaultValue={initial?.memo ?? ""} maxLength={500} placeholder="好きなところ、推し活の目標など" />
+        <textarea
+          id="memo"
+          rows={2}
+          value={memo}
+          onChange={(e) => setMemo(e.target.value)}
+          maxLength={500}
+          placeholder="好きなところ、推し活の目標など"
+        />
       </div>
 
       <SubmitButton>{submitLabel}</SubmitButton>
