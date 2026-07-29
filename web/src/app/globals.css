@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+:root {
+  --color-accent: #e93d82;
+  --color-accent-text: #ffffff;
+  --color-bg: #faf7f5;
+  --color-surface: #ffffff;
+  --color-text: #3d3a3e;
+  --color-muted: #8e8a92;
+  --color-warning: #e5484d;
+  --color-warning-bg: #fff0f0;
+  --color-ok: #30a46c;
+  --color-line: #eee7e4;
+}
+
+html {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="date"],
+input[type="time"],
+input[type="number"],
+input[type="url"],
+select,
+textarea {
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 16px;
+  color: var(--color-text);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 0;
+  border-color: transparent;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-muted);
+  margin-bottom: 4px;
+}
