@@ -10,9 +10,14 @@ export const dynamic = "force-dynamic";
 
 export default async function TripsPage() {
   const user = await requireUser();
-  const trips = getTrips(user.id);
-  const hotelLinks = getActiveLinks("hotel");
-  const transportLinks = getActiveLinks("transport");
+  const [trips, hotelLinks, transportLinks] = await Promise.all([
+    getTrips(user.id),
+    getActiveLinks("hotel"),
+    getActiveLinks("transport"),
+  ]);
+  const linkedEvents = await Promise.all(
+    trips.map((t) => (t.event_id ? getEvent(user.id, t.event_id) : Promise.resolve(null)))
+  );
 
   return (
     <main className="space-y-4">
@@ -37,8 +42,8 @@ export default async function TripsPage() {
         </Card>
       ) : (
         <ul className="space-y-2">
-          {trips.map((t) => {
-            const event = t.event_id ? getEvent(user.id, t.event_id) : null;
+          {trips.map((t, i) => {
+            const event = linkedEvents[i];
             return (
               <li key={t.id}>
                 <Link

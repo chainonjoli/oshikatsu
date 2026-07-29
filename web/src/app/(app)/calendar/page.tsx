@@ -18,7 +18,7 @@ export default async function CalendarPage({
   const user = await requireUser();
   const { m } = await searchParams;
   const { year, month } = parseMonth(m);
-  const events = getEventsInMonth(user.id, year, month);
+  const events = await getEventsInMonth(user.id, year, month);
   const grid = monthGrid(year, month);
   const { prev, next } = adjacentMonths(year, month);
   const today = todayJST();

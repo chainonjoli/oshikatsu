@@ -19,12 +19,14 @@ export default async function TodayEventPage({
 }) {
   const user = await requireUser();
   const { eventId } = await params;
-  const event = getEvent(user.id, eventId);
+  const event = await getEvent(user.id, eventId);
   if (!event) notFound();
 
-  const trip = getTripByEvent(user.id, eventId);
-  const checklist = getChecklistByEvent(user.id, eventId);
-  const items = checklist ? getChecklistItems(checklist.id) : [];
+  const [trip, checklist] = await Promise.all([
+    getTripByEvent(user.id, eventId),
+    getChecklistByEvent(user.id, eventId),
+  ]);
+  const items = checklist ? await getChecklistItems(checklist.id) : [];
 
   return (
     <main>

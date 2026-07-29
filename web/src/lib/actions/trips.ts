@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import crypto from "node:crypto";
-import { getDb } from "../db";
+import { queryOne, run } from "../db";
 import { nowISO } from "../dates";
 import { requireUser } from "../auth";
 import { TRANSPORT_TYPES } from "../constants";
@@ -60,11 +60,15 @@ function readTripForm(formData: FormData) {
 }
 
 /** event_id は自分の予定のみ許可(他ユーザーの予定への紐づけを防ぐ) */
-function validateEventOwnership(userId: string, eventId: string | null): string | null {
+async function validateEventOwnership(
+  userId: string,
+  eventId: string | null
+): Promise<string | null> {
   if (!eventId) return null;
-  const row = getDb()
-    .prepare("SELECT id FROM events WHERE id = ? AND user_id = ?")
-    .get(eventId, userId);
+  const row = await queryOne<{ id: string }>(
+    "SELECT id FROM events WHERE id = ? AND user_id = ?",
+    [eventId, userId]
+  );
   return row ? eventId : null;
 }
 
@@ -73,48 +77,48 @@ export async function createTripAction(formData: FormData) {
   const { errors, values } = readTripForm(formData);
   if (errors.length > 0) redirect(`/trips/new?error=${encodeURIComponent(errors[0])}`);
 
-  const eventId = validateEventOwnership(user.id, values.eventId);
+  const eventId = await validateEventOwnership(user.id, values.eventId);
   const id = crypto.randomUUID();
   const now = nowISO();
 
   // 1予定1プラン:既に同じ予定のプランがあれば紐づけを外して作成
-  const db = getDb();
   if (eventId) {
-    db.prepare("UPDATE trips SET event_id = NULL WHERE event_id = ? AND user_id = ?").run(
+    await run("UPDATE trips SET event_id = NULL WHERE event_id = ? AND user_id = ?", [
       eventId,
-      user.id
-    );
+      user.id,
+    ]);
   }
-  db.prepare(
+  await run(
     `INSERT INTO trips (id, user_id, event_id, title, origin, transport_type, depart_time,
       arrive_time, return_memo, hotel_name, hotel_checkin, hotel_checkout, hotel_memo,
       cost_transport, cost_hotel, cost_ticket, cost_goods, cost_food, cost_other,
       schedule_json, memo, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    id,
-    user.id,
-    eventId,
-    values.title,
-    values.origin,
-    values.transportType,
-    values.departTime,
-    values.arriveTime,
-    values.returnMemo,
-    values.hotelName,
-    values.hotelCheckin,
-    values.hotelCheckout,
-    values.hotelMemo,
-    values.costTransport,
-    values.costHotel,
-    values.costTicket,
-    values.costGoods,
-    values.costFood,
-    values.costOther,
-    values.scheduleJson,
-    values.memo,
-    now,
-    now
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      user.id,
+      eventId,
+      values.title,
+      values.origin,
+      values.transportType,
+      values.departTime,
+      values.arriveTime,
+      values.returnMemo,
+      values.hotelName,
+      values.hotelCheckin,
+      values.hotelCheckout,
+      values.hotelMemo,
+      values.costTransport,
+      values.costHotel,
+      values.costTicket,
+      values.costGoods,
+      values.costFood,
+      values.costOther,
+      values.scheduleJson,
+      values.memo,
+      now,
+      now,
+    ]
   );
 
   revalidatePath("/", "layout");
@@ -127,22 +131,20 @@ export async function updateTripAction(formData: FormData) {
   const { errors, values } = readTripForm(formData);
   if (errors.length > 0) redirect(`/trips/${id}?error=${encodeURIComponent(errors[0])}`);
 
-  const eventId = validateEventOwnership(user.id, values.eventId);
-  const db = getDb();
+  const eventId = await validateEventOwnership(user.id, values.eventId);
   if (eventId) {
-    db.prepare(
-      "UPDATE trips SET event_id = NULL WHERE event_id = ? AND user_id = ? AND id != ?"
-    ).run(eventId, user.id, id);
+    await run(
+      "UPDATE trips SET event_id = NULL WHERE event_id = ? AND user_id = ? AND id != ?",
+      [eventId, user.id, id]
+    );
   }
-  const result = db
-    .prepare(
-      `UPDATE trips SET event_id = ?, title = ?, origin = ?, transport_type = ?, depart_time = ?,
-        arrive_time = ?, return_memo = ?, hotel_name = ?, hotel_checkin = ?, hotel_checkout = ?,
-        hotel_memo = ?, cost_transport = ?, cost_hotel = ?, cost_ticket = ?, cost_goods = ?,
-        cost_food = ?, cost_other = ?, schedule_json = ?, memo = ?, updated_at = ?
-       WHERE id = ? AND user_id = ?`
-    )
-    .run(
+  const changes = await run(
+    `UPDATE trips SET event_id = ?, title = ?, origin = ?, transport_type = ?, depart_time = ?,
+      arrive_time = ?, return_memo = ?, hotel_name = ?, hotel_checkin = ?, hotel_checkout = ?,
+      hotel_memo = ?, cost_transport = ?, cost_hotel = ?, cost_ticket = ?, cost_goods = ?,
+      cost_food = ?, cost_other = ?, schedule_json = ?, memo = ?, updated_at = ?
+     WHERE id = ? AND user_id = ?`,
+    [
       eventId,
       values.title,
       values.origin,
@@ -164,9 +166,10 @@ export async function updateTripAction(formData: FormData) {
       values.memo,
       nowISO(),
       id,
-      user.id
-    );
-  if (result.changes === 0) redirect("/trips");
+      user.id,
+    ]
+  );
+  if (changes === 0) redirect("/trips");
 
   revalidatePath("/", "layout");
   redirect(`/trips/${id}?saved=1`);
@@ -175,7 +178,7 @@ export async function updateTripAction(formData: FormData) {
 export async function deleteTripAction(formData: FormData) {
   const user = await requireUser();
   const id = String(formData.get("id") ?? "");
-  getDb().prepare("DELETE FROM trips WHERE id = ? AND user_id = ?").run(id, user.id);
+  await run("DELETE FROM trips WHERE id = ? AND user_id = ?", [id, user.id]);
   revalidatePath("/", "layout");
   redirect("/trips");
 }

@@ -1,7 +1,9 @@
-import Database from "better-sqlite3";
+import { createClient, type Client, type InArgs } from "@libsql/client";
 import fs from "node:fs";
 import path from "node:path";
 
+// 本番(Vercel等): DATABASE_URL(libsql://... の Turso URL)+ DATABASE_AUTH_TOKEN
+// ローカル開発:   環境変数なしで web/data/app.db のファイルに保存
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
@@ -16,7 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id),
   expires_at TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
@@ -24,7 +26,7 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 
 CREATE TABLE IF NOT EXISTS oshis (
   id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id),
   genre TEXT NOT NULL DEFAULT 'idol',
   group_name TEXT NOT NULL,
   member_name TEXT NOT NULL,
@@ -39,8 +41,8 @@ CREATE INDEX IF NOT EXISTS idx_oshis_user ON oshis(user_id);
 
 CREATE TABLE IF NOT EXISTS events (
   id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  oshi_id TEXT REFERENCES oshis(id) ON DELETE SET NULL,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  oshi_id TEXT,
   title TEXT NOT NULL,
   category TEXT NOT NULL DEFAULT 'other',
   date TEXT NOT NULL,
@@ -61,8 +63,8 @@ CREATE INDEX IF NOT EXISTS idx_events_user_date ON events(user_id, date);
 
 CREATE TABLE IF NOT EXISTS trips (
   id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  event_id TEXT UNIQUE REFERENCES events(id) ON DELETE SET NULL,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  event_id TEXT UNIQUE,
   title TEXT NOT NULL,
   origin TEXT NOT NULL DEFAULT '',
   transport_type TEXT NOT NULL DEFAULT 'shinkansen',
@@ -88,8 +90,8 @@ CREATE INDEX IF NOT EXISTS idx_trips_user ON trips(user_id);
 
 CREATE TABLE IF NOT EXISTS checklists (
   id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  event_id TEXT REFERENCES events(id) ON DELETE SET NULL,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  event_id TEXT,
   title TEXT NOT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
@@ -98,7 +100,7 @@ CREATE INDEX IF NOT EXISTS idx_checklists_user ON checklists(user_id);
 
 CREATE TABLE IF NOT EXISTS checklist_items (
   id TEXT PRIMARY KEY,
-  checklist_id TEXT NOT NULL REFERENCES checklists(id) ON DELETE CASCADE,
+  checklist_id TEXT NOT NULL REFERENCES checklists(id),
   name TEXT NOT NULL,
   checked INTEGER NOT NULL DEFAULT 0,
   sort_order INTEGER NOT NULL DEFAULT 0,
@@ -120,15 +122,46 @@ CREATE TABLE IF NOT EXISTS affiliate_links (
 );
 `;
 
-let db: Database.Database | null = null;
+let client: Client | null = null;
+let ready: Promise<void> | null = null;
 
-export function getDb(): Database.Database {
-  if (db) return db;
-  const dir = path.join(process.cwd(), "data");
-  fs.mkdirSync(dir, { recursive: true });
-  db = new Database(path.join(dir, "app.db"));
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
-  db.exec(SCHEMA);
-  return db;
+function getClient(): Client {
+  if (client) return client;
+  const url = process.env.DATABASE_URL ?? process.env.TURSO_DATABASE_URL;
+  const authToken = process.env.DATABASE_AUTH_TOKEN ?? process.env.TURSO_AUTH_TOKEN;
+  if (url) {
+    client = createClient({ url, authToken });
+  } else {
+    const dir = path.join(process.cwd(), "data");
+    fs.mkdirSync(dir, { recursive: true });
+    client = createClient({ url: `file:${path.join(dir, "app.db")}` });
+  }
+  return client;
+}
+
+async function getDb(): Promise<Client> {
+  const c = getClient();
+  if (!ready) ready = c.executeMultiple(SCHEMA);
+  await ready;
+  return c;
+}
+
+/** SELECT: 全行を返す */
+export async function query<T>(sql: string, args: InArgs = []): Promise<T[]> {
+  const c = await getDb();
+  const rs = await c.execute({ sql, args });
+  return rs.rows as unknown as T[];
+}
+
+/** SELECT: 先頭行または null */
+export async function queryOne<T>(sql: string, args: InArgs = []): Promise<T | null> {
+  const rows = await query<T>(sql, args);
+  return rows[0] ?? null;
+}
+
+/** INSERT / UPDATE / DELETE: 影響行数を返す */
+export async function run(sql: string, args: InArgs = []): Promise<number> {
+  const c = await getDb();
+  const rs = await c.execute({ sql, args });
+  return rs.rowsAffected;
 }

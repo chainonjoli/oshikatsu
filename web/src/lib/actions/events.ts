@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import crypto from "node:crypto";
-import { getDb } from "../db";
+import { queryOne, run } from "../db";
 import { nowISO } from "../dates";
 import { requireUser } from "../auth";
 import { EVENT_CATEGORIES, TICKET_STATUSES } from "../constants";
@@ -56,19 +56,18 @@ export async function createEventAction(formData: FormData) {
   const { errors, values } = readEventForm(formData);
   if (errors.length > 0) redirect(`/events/new?error=${encodeURIComponent(errors[0])}`);
 
-  const oshi = getDb()
-    .prepare("SELECT id FROM oshis WHERE user_id = ? ORDER BY created_at LIMIT 1")
-    .get(user.id) as { id: string } | undefined;
+  const oshi = await queryOne<{ id: string }>(
+    "SELECT id FROM oshis WHERE user_id = ? ORDER BY created_at LIMIT 1",
+    [user.id]
+  );
 
   const now = nowISO();
-  getDb()
-    .prepare(
-      `INSERT INTO events (id, user_id, oshi_id, title, category, date, open_time, start_time,
-        venue, seat, ticket_status, weather_memo, friends_memo, emergency_contact, memo, source_note,
-        created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .run(
+  await run(
+    `INSERT INTO events (id, user_id, oshi_id, title, category, date, open_time, start_time,
+      venue, seat, ticket_status, weather_memo, friends_memo, emergency_contact, memo, source_note,
+      created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
       crypto.randomUUID(),
       user.id,
       oshi?.id ?? null,
@@ -86,8 +85,9 @@ export async function createEventAction(formData: FormData) {
       values.memo,
       values.sourceNote,
       now,
-      now
-    );
+      now,
+    ]
+  );
 
   revalidatePath("/", "layout");
   redirect(`/calendar?m=${values.date.slice(0, 7)}`);
@@ -99,14 +99,12 @@ export async function updateEventAction(formData: FormData) {
   const { errors, values } = readEventForm(formData);
   if (errors.length > 0) redirect(`/events/${id}/edit?error=${encodeURIComponent(errors[0])}`);
 
-  const result = getDb()
-    .prepare(
-      `UPDATE events SET title = ?, category = ?, date = ?, open_time = ?, start_time = ?,
-        venue = ?, seat = ?, ticket_status = ?, weather_memo = ?, friends_memo = ?,
-        emergency_contact = ?, memo = ?, source_note = ?, updated_at = ?
-       WHERE id = ? AND user_id = ?`
-    )
-    .run(
+  const changes = await run(
+    `UPDATE events SET title = ?, category = ?, date = ?, open_time = ?, start_time = ?,
+      venue = ?, seat = ?, ticket_status = ?, weather_memo = ?, friends_memo = ?,
+      emergency_contact = ?, memo = ?, source_note = ?, updated_at = ?
+     WHERE id = ? AND user_id = ?`,
+    [
       values.title,
       values.category,
       values.date,
@@ -122,9 +120,10 @@ export async function updateEventAction(formData: FormData) {
       values.sourceNote,
       nowISO(),
       id,
-      user.id
-    );
-  if (result.changes === 0) redirect("/calendar");
+      user.id,
+    ]
+  );
+  if (changes === 0) redirect("/calendar");
 
   revalidatePath("/", "layout");
   redirect(`/calendar?m=${values.date.slice(0, 7)}`);
@@ -133,7 +132,10 @@ export async function updateEventAction(formData: FormData) {
 export async function deleteEventAction(formData: FormData) {
   const user = await requireUser();
   const id = String(formData.get("id") ?? "");
-  getDb().prepare("DELETE FROM events WHERE id = ? AND user_id = ?").run(id, user.id);
+  // 参照の後始末(サーバーレスDBでは外部キーのCASCADEに頼らず明示的に行う)
+  await run("UPDATE trips SET event_id = NULL WHERE event_id = ? AND user_id = ?", [id, user.id]);
+  await run("UPDATE checklists SET event_id = NULL WHERE event_id = ? AND user_id = ?", [id, user.id]);
+  await run("DELETE FROM events WHERE id = ? AND user_id = ?", [id, user.id]);
   revalidatePath("/", "layout");
   redirect("/calendar");
 }

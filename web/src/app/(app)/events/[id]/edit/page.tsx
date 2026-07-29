@@ -19,11 +19,13 @@ export default async function EditEventPage({
   const user = await requireUser();
   const { id } = await params;
   const { error } = await searchParams;
-  const event = getEvent(user.id, id);
+  const event = await getEvent(user.id, id);
   if (!event) notFound();
 
-  const trip = getTripByEvent(user.id, id);
-  const checklist = getChecklistByEvent(user.id, id);
+  const [trip, checklist] = await Promise.all([
+    getTripByEvent(user.id, id),
+    getChecklistByEvent(user.id, id),
+  ]);
   const isLiveDay = LIVE_DAY_CATEGORIES.includes(
     event.category as (typeof LIVE_DAY_CATEGORIES)[number]
   );

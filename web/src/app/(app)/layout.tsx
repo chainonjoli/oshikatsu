@@ -5,7 +5,7 @@ import BottomNav from "@/components/BottomNav";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
-  const oshi = getOshi(user.id);
+  const oshi = await getOshi(user.id);
   const accent = oshi?.color ?? "#E93D82";
 
   return (

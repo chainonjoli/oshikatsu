@@ -18,11 +18,11 @@ export default async function TripDetailPage({
   const user = await requireUser();
   const { id } = await params;
   const { error, saved } = await searchParams;
-  const trip = getTrip(user.id, id);
+  const trip = await getTrip(user.id, id);
   if (!trip) notFound();
 
-  const events = getUpcomingEvents(user.id, 20);
-  const linkedEvent = trip.event_id ? getEvent(user.id, trip.event_id) : null;
+  const events = await getUpcomingEvents(user.id, 20);
+  const linkedEvent = trip.event_id ? await getEvent(user.id, trip.event_id) : null;
   const options = [
     ...(linkedEvent && !events.some((e) => e.id === linkedEvent.id) ? [linkedEvent] : []),
     ...events,
@@ -48,8 +48,8 @@ export default async function TripDetailPage({
         submitLabel="保存する"
       />
 
-      <PrBlock title="ホテルの予約" links={getActiveLinks("hotel")} />
-      <PrBlock title="交通の予約" links={getActiveLinks("transport")} />
+      <PrBlock title="ホテルの予約" links={await getActiveLinks("hotel")} />
+      <PrBlock title="交通の予約" links={await getActiveLinks("transport")} />
 
       <form action={deleteTripAction}>
         <input type="hidden" name="id" value={trip.id} />
