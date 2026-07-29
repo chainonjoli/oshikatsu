@@ -9,32 +9,33 @@
 
 ## 主な機能(MVP)
 
-- 🔐 ユーザー登録・ログイン
 - 💗 推し登録(標準候補+自由入力、テーマカラーがアプリ全体に反映)
 - 📅 推し活カレンダー(14カテゴリー、申込・支払などの期限を警告表示)
 - 🎤 **ライブ当日モード** — 公演・座席・チケット・持ち物・交通・宿泊・天気・推し友・行動予定を1画面に集約し、未完了を警告
 - 🧳 遠征プランナー(交通・宿泊・予算の自動集計・当日の行動予定)
 - 🎒 持ち物チェックリスト(標準16項目テンプレート+自由編集、イベントごとに保存)
-- 🔗 アフィリエイトリンク管理(管理者用。「PR」表記つきで文脈に応じて表示)
+- 🔗 アフィリエイトリンク表示(`web/src/data/affiliate-links.json` で管理。「PR」表記つき)
+- 💾 データは各ユーザーの端末(ブラウザ)内に保存。会員登録不要。バックアップ機能つき
 
-## 起動方法
+## 公開(GitHub Pages・無料)
+
+`main` へのプッシュで GitHub Actions が自動ビルド・公開します。
+公開URL:**https://chainonjoli.github.io/oshikatsu/**(リポジトリを Public にする必要があります)
+詳細は [docs/09_deploy.md](./docs/09_deploy.md) を参照。
+
+## 開発
 
 ```bash
 cd web
 npm install
 npm run dev          # http://localhost:3000
+npm test             # ユニットテスト
+npm run build        # 静的サイトを out/ に生成
 ```
-
-- 初回アクセスで SQLite DB(`web/data/app.db`)が自動作成されます
-- 最初に登録したユーザーが管理者になります(設定 → 運営メニュー)
-
-## インターネットに公開する(無料)
-
-Vercel(アプリ)+ Turso(データベース)の無料枠で公開できます。手順は [docs/09_deploy.md](./docs/09_deploy.md) を参照してください。Docker 対応ホスティング用の `web/Dockerfile` も同梱しています。
 
 ## 技術構成
 
-Next.js 15(App Router)/ TypeScript / Tailwind CSS / libSQL(ローカルはSQLiteファイル・本番はTurso)/ Vitest
+Next.js 15(静的エクスポート)/ TypeScript / Tailwind CSS / localStorage(端末内保存)/ Vitest / GitHub Actions + GitHub Pages
 
 ## ドキュメント
 

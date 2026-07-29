@@ -1,32 +1,29 @@
+"use client";
+
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth";
-import { getTodayLiveEvents, getUpcomingEvents, getAllEvents } from "@/lib/queries";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { liveDayCandidates, todayLiveEvents, useAppData } from "@/lib/store";
+import { useMounted } from "@/lib/useMounted";
 import { formatDateJa } from "@/lib/dates";
-import { LIVE_DAY_CATEGORIES } from "@/lib/constants";
 import { Card, CategoryBadge } from "@/components/ui";
 
-export const dynamic = "force-dynamic";
+export default function TodayPage() {
+  const mounted = useMounted();
+  const data = useAppData();
+  const router = useRouter();
+  const todayLives = mounted ? todayLiveEvents(data) : [];
 
-export default async function TodayPage() {
-  const user = await requireUser();
-  const todayLives = await getTodayLiveEvents(user.id);
+  useEffect(() => {
+    if (mounted && todayLives.length === 1) {
+      router.replace(`/today/view/?id=${todayLives[0].id}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, todayLives.length]);
 
-  if (todayLives.length === 1) redirect(`/today/${todayLives[0].id}`);
+  if (!mounted) return <main className="py-20" />;
 
-  const [upcoming, all] = await Promise.all([
-    getUpcomingEvents(user.id, 20),
-    getAllEvents(user.id),
-  ]);
-  const candidates =
-    todayLives.length > 0
-      ? todayLives
-      : [...upcoming, ...all]
-          .filter((e) =>
-            LIVE_DAY_CATEGORIES.includes(e.category as (typeof LIVE_DAY_CATEGORIES)[number])
-          )
-          .filter((e, i, arr) => arr.findIndex((x) => x.id === e.id) === i)
-          .slice(0, 10);
+  const candidates = todayLives.length > 0 ? todayLives : liveDayCandidates(data, 10);
 
   return (
     <main className="space-y-4">
@@ -66,7 +63,7 @@ export default async function TodayPage() {
           {candidates.map((e) => (
             <li key={e.id}>
               <Link
-                href={`/today/${e.id}`}
+                href={`/today/view/?id=${e.id}`}
                 className="block rounded-2xl bg-white p-4"
                 style={{ boxShadow: "0 1px 3px rgba(61,58,62,0.08)" }}
               >

@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import NewTripClient from "./NewTripClient";
+import EditTripClient from "./EditTripClient";
 
-export default function NewTripPage() {
+export default function EditTripPage() {
   return (
     <Suspense fallback={<main className="py-20" />}>
-      <NewTripClient />
+      <EditTripClient />
     </Suspense>
   );
 }

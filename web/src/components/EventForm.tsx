@@ -1,18 +1,70 @@
+"use client";
+
+import { useState } from "react";
 import { EVENT_CATEGORIES, TICKET_STATUSES } from "@/lib/constants";
+import type { EventInput } from "@/lib/store";
 import type { EventRow } from "@/lib/types";
 import { SubmitButton } from "./ui";
 
 type Props = {
-  action: (formData: FormData) => Promise<void>;
   event?: EventRow | null;
   defaultDate?: string;
   submitLabel: string;
+  onSave: (input: EventInput) => void;
 };
 
-export default function EventForm({ action, event, defaultDate, submitLabel }: Props) {
+export default function EventForm({ event, defaultDate, submitLabel, onSave }: Props) {
+  const [error, setError] = useState("");
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const v = (name: string) => String(f.get(name) ?? "").trim();
+
+    const title = v("title");
+    const date = v("date");
+    const category = v("category");
+    if (!title || title.length > 100) {
+      setError("タイトルを入力してください(100文字まで)");
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      setError("日付を選択してください");
+      return;
+    }
+    onSave({
+      title,
+      category: EVENT_CATEGORIES.some((c) => c.value === category) ? category : "other",
+      date,
+      open_time: v("open_time"),
+      start_time: v("start_time"),
+      venue: v("venue"),
+      seat: v("seat"),
+      ticket_status: TICKET_STATUSES.some((s) => s.value === v("ticket_status"))
+        ? v("ticket_status")
+        : "none",
+      weather_memo: v("weather_memo"),
+      friends_memo: v("friends_memo"),
+      emergency_contact: v("emergency_contact"),
+      memo: v("memo"),
+      source_note: v("source_note"),
+    });
+  }
+
   return (
-    <form action={action} className="space-y-5">
-      {event && <input type="hidden" name="id" value={event.id} />}
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {error && (
+        <p
+          className="rounded-xl border-l-4 px-4 py-3 text-sm font-semibold"
+          style={{
+            background: "var(--color-warning-bg)",
+            borderColor: "var(--color-warning)",
+            color: "var(--color-warning)",
+          }}
+        >
+          {error}
+        </p>
+      )}
 
       <div>
         <label htmlFor="title">タイトル(公演名・予定名)</label>
@@ -77,7 +129,10 @@ export default function EventForm({ action, event, defaultDate, submitLabel }: P
         </div>
       </div>
 
-      <details className="rounded-2xl bg-white p-4" open={!!event && !!(event.weather_memo || event.friends_memo || event.emergency_contact)}>
+      <details
+        className="rounded-2xl bg-white p-4"
+        open={!!event && !!(event.weather_memo || event.friends_memo || event.emergency_contact)}
+      >
         <summary className="cursor-pointer text-sm font-bold" style={{ color: "var(--color-muted)" }}>
           当日モード用の情報(天気・推し友・緊急連絡先)
         </summary>

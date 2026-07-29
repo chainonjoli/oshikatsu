@@ -1,0 +1,21 @@
+{
+  "_使い方": "アフィリエイトリンクはこのファイルで管理します。GitHub上でこのファイルを編集して main に保存すると、数分後にサイトへ自動反映されます。category は hotel(宿泊) / transport(交通) / goods(持ち物・グッズ) / media(CD・雑誌) / other のいずれか。active を false にすると非表示になります。",
+  "links": [
+    {
+      "id": "sample-hotel",
+      "label": "(サンプル)ホテル予約サイトで探す",
+      "url": "https://example.com/hotel",
+      "category": "hotel",
+      "description": "ここに自分のアフィリエイトリンクを設定してください",
+      "active": false
+    },
+    {
+      "id": "sample-goods",
+      "label": "(サンプル)モバイルバッテリーを探す",
+      "url": "https://example.com/goods",
+      "category": "goods",
+      "description": "ここに自分のアフィリエイトリンクを設定してください",
+      "active": false
+    }
+  ]
+}
