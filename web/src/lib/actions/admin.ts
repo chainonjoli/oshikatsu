@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import crypto from "node:crypto";
-import { getDb } from "../db";
+import { run } from "../db";
 import { nowISO } from "../dates";
 import { requireAdmin } from "../auth";
 import { AFFILIATE_CATEGORIES } from "../constants";
@@ -37,12 +37,10 @@ export async function createLinkAction(formData: FormData) {
   if (errors.length > 0) redirect(`/admin/links?error=${encodeURIComponent(errors[0])}`);
 
   const now = nowISO();
-  getDb()
-    .prepare(
-      `INSERT INTO affiliate_links (id, label, url, category, description, active, sort_order, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)`
-    )
-    .run(
+  await run(
+    `INSERT INTO affiliate_links (id, label, url, category, description, active, sort_order, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)`,
+    [
       crypto.randomUUID(),
       values.label,
       values.url,
@@ -50,8 +48,9 @@ export async function createLinkAction(formData: FormData) {
       values.description,
       values.sortOrder,
       now,
-      now
-    );
+      now,
+    ]
+  );
 
   revalidatePath("/", "layout");
   redirect("/admin/links");
@@ -63,12 +62,11 @@ export async function updateLinkAction(formData: FormData) {
   const { errors, values } = readLinkForm(formData);
   if (errors.length > 0) redirect(`/admin/links?error=${encodeURIComponent(errors[0])}`);
 
-  getDb()
-    .prepare(
-      `UPDATE affiliate_links SET label = ?, url = ?, category = ?, description = ?, sort_order = ?, updated_at = ?
-       WHERE id = ?`
-    )
-    .run(values.label, values.url, values.category, values.description, values.sortOrder, nowISO(), id);
+  await run(
+    `UPDATE affiliate_links SET label = ?, url = ?, category = ?, description = ?, sort_order = ?, updated_at = ?
+     WHERE id = ?`,
+    [values.label, values.url, values.category, values.description, values.sortOrder, nowISO(), id]
+  );
 
   revalidatePath("/", "layout");
   redirect("/admin/links");
@@ -77,9 +75,10 @@ export async function updateLinkAction(formData: FormData) {
 export async function toggleLinkAction(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  getDb()
-    .prepare("UPDATE affiliate_links SET active = 1 - active, updated_at = ? WHERE id = ?")
-    .run(nowISO(), id);
+  await run("UPDATE affiliate_links SET active = 1 - active, updated_at = ? WHERE id = ?", [
+    nowISO(),
+    id,
+  ]);
   revalidatePath("/", "layout");
   redirect("/admin/links");
 }
@@ -87,7 +86,7 @@ export async function toggleLinkAction(formData: FormData) {
 export async function deleteLinkAction(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  getDb().prepare("DELETE FROM affiliate_links WHERE id = ?").run(id);
+  await run("DELETE FROM affiliate_links WHERE id = ?", [id]);
   revalidatePath("/", "layout");
   redirect("/admin/links");
 }

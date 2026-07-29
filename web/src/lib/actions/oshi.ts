@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import crypto from "node:crypto";
-import { getDb } from "../db";
+import { queryOne, run } from "../db";
 import { nowISO } from "../dates";
 import { requireUser } from "../auth";
 import { isValidHex } from "../colors";
@@ -21,22 +21,24 @@ export async function saveOshiAction(formData: FormData) {
   if (!memberName || memberName.length > 50) redirect(`${back}?error=${encodeURIComponent("推しの名前を入力してください(50文字まで)")}`);
   const safeColor = isValidHex(color) ? color : "#E93D82";
 
-  const db = getDb();
-  const existing = db
-    .prepare("SELECT id FROM oshis WHERE user_id = ? ORDER BY created_at LIMIT 1")
-    .get(user.id) as { id: string } | undefined;
+  const existing = await queryOne<{ id: string }>(
+    "SELECT id FROM oshis WHERE user_id = ? ORDER BY created_at LIMIT 1",
+    [user.id]
+  );
   const now = nowISO();
 
   if (existing) {
-    db.prepare(
+    await run(
       `UPDATE oshis SET group_name = ?, member_name = ?, color = ?, fan_since = ?, memo = ?, updated_at = ?
-       WHERE id = ? AND user_id = ?`
-    ).run(groupName, memberName, safeColor, fanSince || null, memo, now, existing.id, user.id);
+       WHERE id = ? AND user_id = ?`,
+      [groupName, memberName, safeColor, fanSince || null, memo, now, existing.id, user.id]
+    );
   } else {
-    db.prepare(
+    await run(
       `INSERT INTO oshis (id, user_id, genre, group_name, member_name, color, fan_since, memo, created_at, updated_at)
-       VALUES (?, ?, 'idol', ?, ?, ?, ?, ?, ?, ?)`
-    ).run(crypto.randomUUID(), user.id, groupName, memberName, safeColor, fanSince || null, memo, now, now);
+       VALUES (?, ?, 'idol', ?, ?, ?, ?, ?, ?, ?)`,
+      [crypto.randomUUID(), user.id, groupName, memberName, safeColor, fanSince || null, memo, now, now]
+    );
   }
 
   revalidatePath("/", "layout");

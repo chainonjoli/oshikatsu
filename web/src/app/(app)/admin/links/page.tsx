@@ -23,7 +23,7 @@ export default async function AdminLinksPage({
 }) {
   await requireAdmin();
   const { error } = await searchParams;
-  const links = getAllLinks();
+  const links = await getAllLinks();
 
   return (
     <main className="space-y-4">

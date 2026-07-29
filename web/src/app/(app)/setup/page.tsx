@@ -11,7 +11,7 @@ export default async function SetupPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const user = await requireUser();
-  const oshi = getOshi(user.id);
+  const oshi = await getOshi(user.id);
   const { error } = await searchParams;
 
   return (

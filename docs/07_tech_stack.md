@@ -6,7 +6,7 @@
 |---|---|---|
 | フレームワーク | **Next.js 15(App Router)+ TypeScript** | 1つのコードでサーバー処理と画面を実装でき、スマホ向けの高速な表示に強い。人材・情報が豊富で保守しやすい |
 | UI | **Tailwind CSS** | スマホファーストのスタイルを素早く一貫して書ける |
-| データベース | **SQLite(better-sqlite3)** | MVPに十分。サーバー1台で完結し運用が簡単。将来 PostgreSQL 等へ移行可能なSQL設計 |
+| データベース | **libSQL(@libsql/client)** | ローカル開発はSQLiteファイル、本番は Turso(SQLite互換のクラウドDB・無料枠あり)。Vercel等のサーバーレス環境でも動作。将来 PostgreSQL 等へ移行可能なSQL設計 |
 | 認証 | 自前実装(scrypt ハッシュ+httpOnly Cookie セッション) | MVPの要件(メール+パスワード)に対し外部サービス不要で完結。パスワードは不可逆ハッシュ保存 |
 | 画面更新 | Server Components + Server Actions | API層を薄くでき、フォーム中心のアプリに合う |
 | テスト | Vitest(ロジック単体テスト)+ `next build` | 集計・日付判定・認証ロジックを自動テスト |

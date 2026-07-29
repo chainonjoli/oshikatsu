@@ -14,8 +14,8 @@ export default async function NewTripPage({
 }) {
   const user = await requireUser();
   const { error, event: eventId } = await searchParams;
-  const events = getUpcomingEvents(user.id, 20);
-  const linkedEvent = eventId ? getEvent(user.id, eventId) : null;
+  const events = await getUpcomingEvents(user.id, 20);
+  const linkedEvent = eventId ? await getEvent(user.id, eventId) : null;
 
   // 予定から遷移してきた場合はプラン名と紐づけを初期入力
   const draft = linkedEvent
@@ -36,8 +36,8 @@ export default async function NewTripPage({
       <h1 className="text-xl font-bold">遠征プランを作成</h1>
       <ErrorBanner message={error} />
       <TripForm action={createTripAction} trip={draft} events={options} submitLabel="保存する" />
-      <PrBlock title="ホテルの予約" links={getActiveLinks("hotel")} />
-      <PrBlock title="交通の予約" links={getActiveLinks("transport")} />
+      <PrBlock title="ホテルの予約" links={await getActiveLinks("hotel")} />
+      <PrBlock title="交通の予約" links={await getActiveLinks("transport")} />
     </main>
   );
 }

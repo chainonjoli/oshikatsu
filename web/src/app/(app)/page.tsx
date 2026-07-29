@@ -17,15 +17,17 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const user = await requireUser();
-  const oshi = getOshi(user.id);
+  const oshi = await getOshi(user.id);
   if (!oshi) redirect("/setup");
 
   const today = todayJST();
-  const todayLives = getTodayLiveEvents(user.id);
-  const nextLive = getNextLiveEvent(user.id);
-  const deadlines = getUpcomingDeadlines(user.id, 7);
-  const todayEvents = getTodayEvents(user.id);
-  const upcoming = getUpcomingEvents(user.id, 4);
+  const [todayLives, nextLive, deadlines, todayEvents, upcoming] = await Promise.all([
+    getTodayLiveEvents(user.id),
+    getNextLiveEvent(user.id),
+    getUpcomingDeadlines(user.id, 7),
+    getTodayEvents(user.id),
+    getUpcomingEvents(user.id, 4),
+  ]);
 
   return (
     <main className="space-y-4">

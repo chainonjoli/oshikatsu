@@ -10,17 +10,18 @@ export const dynamic = "force-dynamic";
 
 export default async function TodayPage() {
   const user = await requireUser();
-  const todayLives = getTodayLiveEvents(user.id);
+  const todayLives = await getTodayLiveEvents(user.id);
 
   if (todayLives.length === 1) redirect(`/today/${todayLives[0].id}`);
 
+  const [upcoming, all] = await Promise.all([
+    getUpcomingEvents(user.id, 20),
+    getAllEvents(user.id),
+  ]);
   const candidates =
     todayLives.length > 0
       ? todayLives
-      : [
-          ...getUpcomingEvents(user.id, 20),
-          ...getAllEvents(user.id),
-        ]
+      : [...upcoming, ...all]
           .filter((e) =>
             LIVE_DAY_CATEGORIES.includes(e.category as (typeof LIVE_DAY_CATEGORIES)[number])
           )

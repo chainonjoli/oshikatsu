@@ -27,12 +27,12 @@ export default async function ChecklistDetailPage({
 }) {
   const user = await requireUser();
   const { id } = await params;
-  const list = getChecklist(user.id, id);
+  const list = await getChecklist(user.id, id);
   if (!list) notFound();
 
-  const items = getChecklistItems(list.id);
+  const items = await getChecklistItems(list.id);
   const done = items.filter((i) => i.checked).length;
-  const event = list.event_id ? getEvent(user.id, list.event_id) : null;
+  const event = list.event_id ? await getEvent(user.id, list.event_id) : null;
   const backPath = `/checklists/${list.id}`;
 
   return (
@@ -160,7 +160,7 @@ export default async function ChecklistDetailPage({
         </button>
       </form>
 
-      <PrBlock title="持ち物の準備に" links={getActiveLinks("goods")} />
+      <PrBlock title="持ち物の準備に" links={await getActiveLinks("goods")} />
 
       <form action={deleteChecklistAction}>
         <input type="hidden" name="checklist_id" value={list.id} />

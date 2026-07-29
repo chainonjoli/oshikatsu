@@ -28,13 +28,13 @@ npm run dev          # http://localhost:3000
 - 初回アクセスで SQLite DB(`web/data/app.db`)が自動作成されます
 - 最初に登録したユーザーが管理者になります(設定 → 運営メニュー)
 
-## インターネットに公開する
+## インターネットに公開する(無料)
 
-みんなが使えるように公開する手順は [docs/09_deploy.md](./docs/09_deploy.md) を参照してください(Render 用の設定 `render.yaml` と `web/Dockerfile` を同梱)。
+Vercel(アプリ)+ Turso(データベース)の無料枠で公開できます。手順は [docs/09_deploy.md](./docs/09_deploy.md) を参照してください。Docker 対応ホスティング用の `web/Dockerfile` も同梱しています。
 
 ## 技術構成
 
-Next.js 15(App Router)/ TypeScript / Tailwind CSS / SQLite(better-sqlite3)/ Vitest
+Next.js 15(App Router)/ TypeScript / Tailwind CSS / libSQL(ローカルはSQLiteファイル・本番はTurso)/ Vitest
 
 ## ドキュメント
 

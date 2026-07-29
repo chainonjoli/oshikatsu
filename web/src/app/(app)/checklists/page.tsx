@@ -20,10 +20,18 @@ export default async function ChecklistsPage({
 }) {
   const user = await requireUser();
   const { error, event: presetEventId } = await searchParams;
-  const lists = getChecklists(user.id);
-  const events = getUpcomingEvents(user.id, 20);
-  const presetEvent = presetEventId ? getEvent(user.id, presetEventId) : null;
-  const goodsLinks = getActiveLinks("goods");
+  const [lists, events, goodsLinks] = await Promise.all([
+    getChecklists(user.id),
+    getUpcomingEvents(user.id, 20),
+    getActiveLinks("goods"),
+  ]);
+  const presetEvent = presetEventId ? await getEvent(user.id, presetEventId) : null;
+  const listDetails = await Promise.all(
+    lists.map(async (list) => ({
+      progress: await getChecklistProgress(list.id),
+      event: list.event_id ? await getEvent(user.id, list.event_id) : null,
+    }))
+  );
 
   const eventOptions = [
     ...(presetEvent && !events.some((e) => e.id === presetEvent.id) ? [presetEvent] : []),
@@ -37,9 +45,8 @@ export default async function ChecklistsPage({
 
       {lists.length > 0 && (
         <ul className="space-y-2">
-          {lists.map((list) => {
-            const progress = getChecklistProgress(list.id);
-            const event = list.event_id ? getEvent(user.id, list.event_id) : null;
+          {lists.map((list, i) => {
+            const { progress, event } = listDetails[i];
             const done = progress.total > 0 && progress.done === progress.total;
             return (
               <li key={list.id}>
