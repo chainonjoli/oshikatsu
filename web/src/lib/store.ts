@@ -6,7 +6,7 @@
 import { useSyncExternalStore } from "react";
 import { CHECKLIST_TEMPLATE, DEADLINE_CATEGORIES, LIVE_DAY_CATEGORIES } from "./constants";
 import { todayJST } from "./dates";
-import type { Checklist, ChecklistItem, EventRow, Oshi, Trip } from "./types";
+import type { Checklist, ChecklistItem, EventRow, InfoSource, Oshi, Trip } from "./types";
 
 const KEY = "oshikatsu_data_v1";
 
@@ -16,9 +16,21 @@ export type AppData = {
   trips: Trip[];
   checklists: Checklist[];
   items: ChecklistItem[];
+  /** ユーザーが自分で登録した情報源リンク */
+  sources: InfoSource[];
+  /** 情報源ID → 最後にチェックした日(YYYY-MM-DD) */
+  checks: Record<string, string>;
 };
 
-const EMPTY: AppData = { oshi: null, events: [], trips: [], checklists: [], items: [] };
+const EMPTY: AppData = {
+  oshi: null,
+  events: [],
+  trips: [],
+  checklists: [],
+  items: [],
+  sources: [],
+  checks: {},
+};
 
 let cache: AppData | null = null;
 const listeners = new Set<() => void>();
@@ -41,6 +53,9 @@ function sanitize(raw: unknown): AppData {
     trips: Array.isArray(d.trips) ? d.trips : [],
     checklists: Array.isArray(d.checklists) ? d.checklists : [],
     items: Array.isArray(d.items) ? d.items : [],
+    // 旧バージョンのバックアップには存在しないため、無い場合は空で補う
+    sources: Array.isArray(d.sources) ? d.sources : [],
+    checks: d.checks && typeof d.checks === "object" ? d.checks : {},
   };
 }
 
@@ -109,6 +124,22 @@ export function addEvent(input: EventInput): string {
     return { ...d, events: [...d.events, { ...input, id, created_at: now, updated_at: now }] };
   });
   return id;
+}
+
+/** 貼り付け一括登録用。まとめて追加する */
+export function addEvents(inputs: EventInput[]): number {
+  if (inputs.length === 0) return 0;
+  mutate((d) => {
+    const now = nowISO();
+    const added = inputs.map((input) => ({
+      ...input,
+      id: newId(),
+      created_at: now,
+      updated_at: now,
+    }));
+    return { ...d, events: [...d.events, ...added] };
+  });
+  return inputs.length;
 }
 
 export function updateEvent(id: string, input: EventInput): void {
@@ -268,6 +299,35 @@ export function deleteChecklist(checklistId: string): void {
     checklists: d.checklists.filter((c) => c.id !== checklistId),
     items: d.items.filter((i) => i.checklist_id !== checklistId),
   }));
+}
+
+// ---------- 情報源リンク ----------
+
+export function addSource(label: string, url: string, note: string): void {
+  mutate((d) => ({
+    ...d,
+    sources: [...d.sources, { id: newId(), label, url, note }],
+  }));
+}
+
+export function updateSource(id: string, label: string, url: string, note: string): void {
+  mutate((d) => ({
+    ...d,
+    sources: d.sources.map((s) => (s.id === id ? { ...s, label, url, note } : s)),
+  }));
+}
+
+export function deleteSource(id: string): void {
+  mutate((d) => {
+    const checks = { ...d.checks };
+    delete checks[id];
+    return { ...d, sources: d.sources.filter((s) => s.id !== id), checks };
+  });
+}
+
+/** 「チェックした」を記録(日付のみ保存) */
+export function markChecked(sourceId: string, date: string): void {
+  mutate((d) => ({ ...d, checks: { ...d.checks, [sourceId]: date } }));
 }
 
 // ---------- バックアップ ----------

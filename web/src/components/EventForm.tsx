@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { EVENT_CATEGORIES, TICKET_STATUSES } from "@/lib/constants";
+import { CITIES } from "@/lib/weather";
 import type { EventInput } from "@/lib/store";
 import type { EventRow } from "@/lib/types";
 import { SubmitButton } from "./ui";
@@ -39,6 +40,7 @@ export default function EventForm({ event, defaultDate, submitLabel, onSave }: P
       open_time: v("open_time"),
       start_time: v("start_time"),
       venue: v("venue"),
+      city: v("city"),
       seat: v("seat"),
       ticket_status: TICKET_STATUSES.some((s) => s.value === v("ticket_status"))
         ? v("ticket_status")
@@ -112,6 +114,18 @@ export default function EventForm({ event, defaultDate, submitLabel, onSave }: P
         <input type="text" id="venue" name="venue" maxLength={100} defaultValue={event?.venue ?? ""} placeholder="例:東京ドーム" />
       </div>
 
+      <div>
+        <label htmlFor="city">会場のある都市(天気の自動表示に使います)</label>
+        <select id="city" name="city" defaultValue={event?.city ?? ""}>
+          <option value="">選択しない</option>
+          {CITIES.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label htmlFor="seat">座席</label>
@@ -138,7 +152,7 @@ export default function EventForm({ event, defaultDate, submitLabel, onSave }: P
         </summary>
         <div className="mt-3 space-y-4">
           <div>
-            <label htmlFor="weather_memo">天気メモ</label>
+            <label htmlFor="weather_memo">天気メモ(自動表示に付け足したいこと)</label>
             <input type="text" id="weather_memo" name="weather_memo" maxLength={200} defaultValue={event?.weather_memo ?? ""} placeholder="例:午後から雨予報。折りたたみ傘を持つ" />
           </div>
           <div>

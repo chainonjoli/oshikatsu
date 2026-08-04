@@ -141,6 +141,14 @@ export default function CalendarClient() {
       </section>
 
       <Link
+        href="/events/import"
+        className="block rounded-2xl border-2 border-dashed py-3 text-center text-sm font-bold"
+        style={{ borderColor: "var(--color-line)", color: "var(--color-accent)" }}
+      >
+        📋 日程を貼り付けて一括登録する →
+      </Link>
+
+      <Link
         href="/events/new"
         className="fixed bottom-20 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full text-2xl font-bold shadow-lg"
         style={{ background: "var(--color-accent)", color: "var(--color-accent-text)" }}

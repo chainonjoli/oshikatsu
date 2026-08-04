@@ -7,6 +7,7 @@ import { parseSchedule } from "@/lib/types";
 import type { Checklist, ChecklistItem, EventRow, Trip } from "@/lib/types";
 import { toggleItem } from "@/lib/store";
 import { Card, WarningCard } from "@/components/ui";
+import WeatherPanel from "@/components/WeatherPanel";
 
 type Props = {
   event: EventRow;
@@ -183,22 +184,25 @@ export default function LiveDayView({ event, trip, checklist, items, isToday }: 
         </Row>
 
         <Row icon="☀️" label="天気">
-          <p>
-            {event.weather_memo ? (
-              <span className="font-semibold">{event.weather_memo}</span>
-            ) : (
-              <span style={{ color: "var(--color-muted)" }}>メモ未入力</span>
-            )}{" "}
-            <a
-              href="https://tenki.jp/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-bold"
-              style={{ color: "var(--color-accent)" }}
-            >
-              天気を見る(外部) →
-            </a>
-          </p>
+          {event.city ? (
+            <WeatherPanel cityId={event.city} date={event.date} />
+          ) : (
+            <p className="text-xs" style={{ color: "var(--color-muted)" }}>
+              予定に会場の都市を設定すると、天気を自動表示できます
+            </p>
+          )}
+          {event.weather_memo && (
+            <p className="mt-1 text-sm">{event.weather_memo}</p>
+          )}
+          <a
+            href="https://tenki.jp/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 inline-block text-xs font-bold"
+            style={{ color: "var(--color-accent)" }}
+          >
+            詳しい天気を見る(外部) →
+          </a>
         </Row>
 
         <Row icon="👭" label="推し友">

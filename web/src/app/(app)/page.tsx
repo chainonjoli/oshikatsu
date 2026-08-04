@@ -142,6 +142,7 @@ export default function HomePage() {
         <BigButton href="/today" icon="🎤" label="ライブ当日モード" />
         <BigButton href="/trips" icon="🧳" label="遠征を計画する" />
         <BigButton href="/checklists" icon="🎒" label="持ち物を確認する" />
+        <BigButton href="/sources" icon="🔍" label="情報をチェックする" />
         <BigButton href="#" icon="🛍️" label="グッズを管理する" disabled />
         <BigButton href="#" icon="📔" label="推しノート" disabled />
         <BigButton href="#" icon="💬" label="AIに相談する" disabled />
