@@ -12,6 +12,15 @@ export type Oshi = {
   updated_at: string;
 };
 
+export type InfoSource = {
+  id: string;
+  label: string;
+  url: string;
+  note: string;
+  /** true = リポジトリのJSONで配布しているリンク(ユーザーは削除できない) */
+  builtin?: boolean;
+};
+
 export type EventRow = {
   id: string;
   title: string;
@@ -20,6 +29,8 @@ export type EventRow = {
   open_time: string;
   start_time: string;
   venue: string;
+  /** 天気予報を出す都市(weather.ts の CITIES の id)。未設定なら手動メモのみ */
+  city?: string;
   seat: string;
   ticket_status: string;
   weather_memo: string;
